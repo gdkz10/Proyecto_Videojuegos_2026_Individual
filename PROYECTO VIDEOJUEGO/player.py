@@ -18,7 +18,9 @@ class Player:
         self.speed = 4
         self.moving = False
 
+        # 🔥 SISTEMA DE ECOS
         self.team = []
+        self.ecos = self.team  # alias
 
         self.direction = "down"
 
@@ -45,9 +47,7 @@ class Player:
                 ),
             }
             self.use_sprites = True
-            print("Sprites del jugador cargados correctamente")
-        except Exception as e:
-            print("Error cargando sprites del jugador:", e)
+        except:
             self.use_sprites = False
 
     def update(self, keys, world):

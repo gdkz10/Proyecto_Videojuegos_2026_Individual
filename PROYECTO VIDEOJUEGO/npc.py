@@ -1,91 +1,57 @@
 import pygame
-import random
 import os
+import random
 from settings import TILE_SIZE
-from eco import Eco
 
-def _find_project_root():
-    current = os.path.dirname(os.path.abspath(__file__))
-    while True:
-        if os.path.basename(current) == "PROYECTO VIDEOJUEGO":
-            return current
-        parent = os.path.dirname(current)
-        if parent == current:
-            return os.path.dirname(os.path.abspath(__file__))
-        current = parent
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-BASE_DIR = _find_project_root()
-
-def asset(relative_path):
-    return os.path.join(BASE_DIR, relative_path)
-
+def asset(path):
+    return os.path.join(BASE_DIR, path)
 
 class NPC:
-    def __init__(self, x, y):
-        self.x = x * TILE_SIZE
-        self.y = y * TILE_SIZE
+    def __init__(self, x, y, sprite_path):
 
-        self.size    = TILE_SIZE
-        self.speed   = 2
-        self.color   = (255, 0, 0)
+        self.x = x
+        self.y = y
+        self.size = TILE_SIZE
+        self.img_path = sprite_path
+        self.name = "Entrenador"
 
-        self.vision_range = 5
-        self.chasing  = False
         self.defeated = False
+
+        self.team = self.generate_team()
 
         try:
             self.image = pygame.transform.scale(
-                pygame.image.load(asset("assets/npc/npc.png")),
-                (TILE_SIZE, TILE_SIZE)
+                pygame.image.load(asset(sprite_path)).convert_alpha(),
+                (self.size, self.size)
             )
-            self.use_image = True
-        except FileNotFoundError:
-            print("No se encontró assets/npc/npc.png")
-            self.use_image = False
-        except Exception as e:
-            print(f"Error cargando NPC: {e}")
-            self.use_image = False
+        except:
+            self.image = None
 
-        self.ecos = [
-            Eco("Eco Sombrío", random.randint(8, 12)),
-            Eco("Eco Feroz",   random.randint(10, 15))
-        ]
-        self.hp = 80
+    def generate_team(self):
+        ecos = ["Phantom", "Zabbit", "Licht"]  # 👈
 
-    def can_see_player(self, player):
-        dx = abs(player.x - self.x)
-        dy = abs(player.y - self.y)
-        return dx < self.vision_range * TILE_SIZE and dy < self.vision_range * TILE_SIZE
+        return [{
+            "name": random.choice(ecos),
+            "hp": 100,
+            "type": "Desconocido"
+        } for _ in range(3)]
 
-    def move_towards_player(self, player, world):
-        dx = player.x - self.x
-        dy = player.y - self.y
-        step_x = self.speed if dx > 0 else -self.speed
-        step_y = self.speed if dy > 0 else -self.speed
+    def draw(self, screen, offset_x, offset_y):
+        draw_x = self.x - offset_x
+        draw_y = self.y - offset_y
 
-        if abs(dx) > abs(dy):
-            if not world.is_blocked(self.x + step_x, self.y):
-                self.x += step_x
+        if self.image:
+            screen.blit(self.image, (draw_x, draw_y))
         else:
-            if not world.is_blocked(self.x, self.y + step_y):
-                self.y += step_y
+            pygame.draw.rect(screen, (255,0,0), (draw_x, draw_y, self.size, self.size))
 
-    def update(self, player, world):
-        if self.defeated:
-            return False
-        if self.can_see_player(player):
-            self.chasing = True
-        if self.chasing:
-            self.move_towards_player(player, world)
-            if abs(player.x - self.x) < TILE_SIZE and abs(player.y - self.y) < TILE_SIZE:
-                return True
-        return False
+    def check_collision(self, player):
+        player_tile_x = player.x // self.size
+        player_tile_y = player.y // self.size
 
-    def draw(self, screen, camera):
-        screen_x = self.x - camera.offset_x + 400
-        screen_y = self.y - camera.offset_y + 300
+        npc_tile_x = self.x // self.size
+        npc_tile_y = self.y // self.size
 
-        if self.use_image:
-            screen.blit(self.image, (screen_x, screen_y))
-        else:
-            pygame.draw.rect(screen, self.color, (screen_x, screen_y, self.size, self.size))
+        return player_tile_x == npc_tile_x and player_tile_y == npc_tile_y
